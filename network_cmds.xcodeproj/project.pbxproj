@@ -3842,7 +3842,7 @@
 				GCC_TREAT_WARNINGS_AS_ERRORS = YES;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = NO;
 				PREBINDING = NO;
-				SDKROOT = macosx.internal;
+				SDKROOT = macosx10.13;
 				"STRIPFLAGS[sdk=iphoneos*]" = "-S";
 				SUPPORTED_PLATFORMS = "macosx iphoneos";
 				WARNING_CFLAGS = "-Wall";
@@ -5009,7 +5009,7 @@
 				GCC_TREAT_WARNINGS_AS_ERRORS = YES;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = NO;
 				PREBINDING = NO;
-				SDKROOT = macosx.internal;
+				SDKROOT = macosx10.13;
 				SUPPORTED_PLATFORMS = "macosx iphoneos";
 				WARNING_CFLAGS = "-Wall";
 			};
@@ -5038,7 +5038,7 @@
 				GCC_TREAT_WARNINGS_AS_ERRORS = NO;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = NO;
 				PREBINDING = NO;
-				SDKROOT = macosx.internal;
+				SDKROOT = macosx10.13;
 				"STRIPFLAGS[sdk=iphoneos*]" = "-S";
 				SUPPORTED_PLATFORMS = "macosx iphoneos";
 				WARNING_CFLAGS = "-Wall";
