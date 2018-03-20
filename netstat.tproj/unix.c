@@ -80,7 +80,7 @@
 #include "netstat.h"
 
 #if !TARGET_OS_EMBEDDED
-static	void unixdomainpr __P((struct xunpcb64 *, struct xsocket64 *));
+//static    void unixdomainpr __P((struct xunpcb64 *, struct xsocket64 *));
 #else
 static	void unixdomainpr __P((struct xunpcb *, struct xsocket *));
 #endif
@@ -136,16 +136,16 @@ unixpr()
 #else
 			xunp = (struct xunpcb *)xug;
 #endif
-			so = &xunp->xu_socket;
+			// so = &xunp->xu_socket;
 
 			/* Ignore PCBs which were freed during copyout. */
 #if !TARGET_OS_EMBEDDED
-			if (xunp->xunp_gencnt > oxug->xug_gen)
+			// if (xunp->xunp_gencnt > oxug->xug_gen)
 #else
 			if (xunp->xu_unp.unp_gencnt > oxug->xug_gen)
 #endif
 				continue;
-			unixdomainpr(xunp, so);
+//            unixdomainpr(xunp, so);
 		}
 		if (xug != oxug && xug->xug_gen != oxug->xug_gen) {
 			if (oxug->xug_count > xug->xug_count) {
@@ -163,65 +163,68 @@ unixpr()
 	}
 }
 
-static void
-unixdomainpr(xunp, so)
-#if !TARGET_OS_EMBEDDED
-	struct xunpcb64 *xunp;
-	struct xsocket64 *so;
-#else
-	struct xunpcb *xunp;
-	struct xsocket *so;
-#endif
-{
-#if TARGET_OS_EMBEDDED
-	struct unpcb *unp;
-#endif
-	struct sockaddr_un *sa;
-	static int first = 1;
+//static void
+//unixdomainpr(xunp, so)
+//#if !TARGET_OS_EMBEDDED
+//    struct xunpcb64 *xunp;
+//    struct xsocket64 *so;
+//#else
+//    struct xunpcb *xunp;
+//    struct xsocket *so;
+//#endif
+//static void
+//unixdomainpr(struct xunpcb64 *xunp, struct xsocket64 *so)
+//{
+//#if TARGET_OS_EMBEDDED
+//    struct unpcb *unp;
+//#endif
+//    struct sockaddr_un *sa;
+//    static int first = 1;
+//
+//#if !TARGET_OS_EMBEDDED
+//    // sa = &xunp->xu_addr;
+//#else
+//    unp = &xunp->xu_unp;
+//    if (unp->unp_addr)
+//        sa = &xunp->xu_addr;
+//    else
+//        sa = (struct sockaddr_un *)0;
+//#endif
+//
+//    if (first) {
+//        printf("Active LOCAL (UNIX) domain sockets\n");
+//        printf(
+//#if !TARGET_OS_EMBEDDED
+//"%-16.16s %-6.6s %-6.6s %-6.6s %16.16s %16.16s %16.16s %16.16s Addr\n",
+//#else
+//"%-8.8s %-6.6s %-6.6s %-6.6s %8.8s %8.8s %8.8s %8.8s Addr\n",
+//#endif
+//            "Address", "Type", "Recv-Q", "Send-Q",
+//            "Inode", "Conn", "Refs", "Nextref");
+//        first = 0;
+//    }
+//#if !TARGET_OS_EMBEDDED
+//    printf("%16lx %-6.6s %6u %6u %16lx %16lx %16lx %16lx",
+//           (long)xunp->xu_unpp, socktype[so->so_type], so->so_rcv.sb_cc,
+//           so->so_snd.sb_cc,
+//           (long)xunp->xunp_vnode, (long)xunp->xunp_conn,
+//           (long)xunp->xunp_refs, (long)xunp->xunp_reflink.le_next);
+//#else
+//    printf("%8lx %-6.6s %6u %6u %8lx %8lx %8lx %8lx",
+//           (long)so->so_pcb, socktype[so->so_type], so->so_rcv.sb_cc,
+//           so->so_snd.sb_cc,
+//           (long)unp->unp_vnode, (long)unp->unp_conn,
+//           (long)unp->unp_refs.lh_first, (long)unp->unp_reflink.le_next);
+//#endif
+//
+//#if !TARGET_OS_EMBEDDED
+//    if (sa->sun_len)
+//#else
+//    if (sa)
+//#endif
+//        printf(" %.*s",
+//            (int)(sa->sun_len - offsetof(struct sockaddr_un, sun_path)),
+//            sa->sun_path);
+//    putchar('\n');
+//}
 
-#if !TARGET_OS_EMBEDDED
-	sa = &xunp->xu_addr;
-#else
-	unp = &xunp->xu_unp;
-	if (unp->unp_addr)
-		sa = &xunp->xu_addr;
-	else
-		sa = (struct sockaddr_un *)0;
-#endif
-
-	if (first) {
-		printf("Active LOCAL (UNIX) domain sockets\n");
-		printf(
-#if !TARGET_OS_EMBEDDED
-"%-16.16s %-6.6s %-6.6s %-6.6s %16.16s %16.16s %16.16s %16.16s Addr\n",
-#else
-"%-8.8s %-6.6s %-6.6s %-6.6s %8.8s %8.8s %8.8s %8.8s Addr\n",
-#endif
-		    "Address", "Type", "Recv-Q", "Send-Q",
-		    "Inode", "Conn", "Refs", "Nextref");
-		first = 0;
-	}
-#if !TARGET_OS_EMBEDDED
-	printf("%16lx %-6.6s %6u %6u %16lx %16lx %16lx %16lx",
-	       (long)xunp->xu_unpp, socktype[so->so_type], so->so_rcv.sb_cc,
-	       so->so_snd.sb_cc,
-	       (long)xunp->xunp_vnode, (long)xunp->xunp_conn,
-	       (long)xunp->xunp_refs, (long)xunp->xunp_reflink.le_next);
-#else
-	printf("%8lx %-6.6s %6u %6u %8lx %8lx %8lx %8lx",
-	       (long)so->so_pcb, socktype[so->so_type], so->so_rcv.sb_cc,
-	       so->so_snd.sb_cc,
-	       (long)unp->unp_vnode, (long)unp->unp_conn,
-	       (long)unp->unp_refs.lh_first, (long)unp->unp_reflink.le_next);
-#endif
-
-#if !TARGET_OS_EMBEDDED
-	if (sa->sun_len)
-#else
-	if (sa)
-#endif
-		printf(" %.*s",
-		    (int)(sa->sun_len - offsetof(struct sockaddr_un, sun_path)),
-		    sa->sun_path);
-	putchar('\n');
-}

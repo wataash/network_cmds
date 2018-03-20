@@ -66,7 +66,7 @@
 #include <sys/sys_domain.h>
 #include <sys/kern_control.h>
 #include <sys/kern_event.h>
-#include <net/ntstat.h>
+// #include <net/ntstat.h>
 
 #include <errno.h>
 #include <err.h>
@@ -96,8 +96,8 @@ systmpr(uint32_t proto,
 {
 	const char *mibvar;
 	size_t len;
-	char *buf, *next;
-	struct xsystmgen *xig, *oxig;
+    char *buf, *next;
+    struct xsystmgen *xig, *oxig;
 	struct xgen_n *xgn;
 	int which = 0;
 	struct xsocket_n *so = NULL;
@@ -108,7 +108,7 @@ systmpr(uint32_t proto,
 	struct xkctlpcb *kcb = NULL;
 	struct xkevtpcb *kevb = NULL;
 	int first = 1;
-	
+
 	switch (proto) {
 		case SYSPROTO_EVENT:
                         mibvar = "net.systm.kevt.pcblist";
@@ -144,11 +144,12 @@ systmpr(uint32_t proto,
 	 * Bail-out to avoid logic error in the loop below when
 	 * there is in fact no more control block to process
 	 */
-	if (len <= sizeof(struct xsystmgen)) {
+#if 0
+    if (len <= sizeof(struct xsystmgen)) {
 		free(buf);
 		return;
 	}
-	oxig = xig = (struct xsystmgen *)buf;
+    oxig = xig = (struct xsystmgen *)buf;
 	for (next = buf + ROUNDUP64(xig->xg_len); next < buf + len;
 	     next += ROUNDUP64(xgn->xgn_len)) {
 		xgn = (struct xgen_n*)next;
@@ -206,16 +207,18 @@ systmpr(uint32_t proto,
 				printf("\n");
 				first = 0;
 			}
-			if (Aflag)
+#if 0
+            if (Aflag)
 				printf("%16llx ", kctl->xkr_kctlref);
 			printf("%8x ", kctl->xkr_id);
 			if (Aflag)
 				printf("%8d ", kctl->xkr_reg_unit);
-			printf("%8x ", kctl->xkr_flags);
+            printf("%8x ", kctl->xkr_flags);
 			printf("%8d ", kctl->xkr_pcbcount);
 			printf("%8d ", kctl->xkr_recvbufsize);
 			printf("%8d ", kctl->xkr_sendbufsize);
-			printf("%s ", kctl->xkr_name);
+#endif
+            printf("%s ", kctl->xkr_name);
 			printf("\n");
 		} else if (which == ALL_XGN_KIND_KCB) {
 			which = 0;
@@ -316,7 +319,7 @@ systmpr(uint32_t proto,
 		}
 			
 	}
-	if (xig != oxig && xig->xg_gen != oxig->xg_gen) {
+    if (xig != oxig && xig->xg_gen != oxig->xg_gen) {
 		if (oxig->xg_count > xig->xg_count) {
 			printf("Some %s sockets may have been deleted.\n",
 			       name);
@@ -328,16 +331,19 @@ systmpr(uint32_t proto,
 			       name);
 		}
 	}
-	free(buf);
+#endif // if 0
+    free(buf);
 }
 
 void
 kctl_stats(uint32_t off __unused, char *name, int af __unused)
 {
-	static struct kctlstat pkctlstat;
+#if 0
+    static struct kctlstat pkctlstat;
 	struct kctlstat kctlstat;
 	size_t len = sizeof(struct kctlstat);
-	const char *mibvar = "net.systm.kctl.stats";
+#endif
+    const char *mibvar = "net.systm.kctl.stats";
 	
 	if (sysctlbyname(mibvar, &kctlstat, &len, 0, 0) < 0) {
 		warn("sysctl: %s", mibvar);

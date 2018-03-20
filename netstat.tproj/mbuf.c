@@ -102,8 +102,10 @@ bool seen[256];			/* "have we seen this type yet?" */
 
 mb_stat_t *mb_stat;
 unsigned int njcl, njclbytes;
+#if 0
 mleak_stat_t *mleak_stat;
 struct mleak_table table;
+#endif
 
 #define	KERN_IPC_MB_STAT	"kern.ipc.mb_stat"
 #define	KERN_IPC_NJCL		"kern.ipc.njcl"
@@ -280,7 +282,8 @@ mbpr(void)
 	free(mb_stat);
 	mb_stat = NULL;
 
-	if (mleak_stat != NULL) {
+#if 0
+    if (mleak_stat != NULL) {
 		mleak_trace_stat_t *mltr;
 
 		printf("\nmbuf leak detection table:\n");
@@ -331,6 +334,7 @@ mbpr(void)
 		free(mleak_stat);
 		mleak_stat = NULL;
 	}
+#endif /* if 0 */
 }
 
 static const char *
@@ -416,7 +420,10 @@ mbpr_getdata(void)
 		goto done;
 	}
 
-	/* mbuf leak detection! */
+
+// netstat -mmmm => mbuf leak detection is not enabled in the kernel.
+#if 0
+    /* mbuf leak detection! */
 	if (mflag > 3) {
 		errno = 0;
 		len = sizeof (table);
@@ -452,9 +459,12 @@ mbpr_getdata(void)
 			goto done;
 		}
 	}
+#endif // if 0
 
+#if 0
 skip:
-	len = sizeof (njcl);
+#endif
+    len = sizeof (njcl);
 	(void) sysctlbyname(KERN_IPC_NJCL, &njcl, &len, 0, 0);
 	len = sizeof (njclbytes);
 	(void) sysctlbyname(KERN_IPC_NJCL_BYTES, &njclbytes, &len, 0, 0);
@@ -467,10 +477,12 @@ done:
 		mb_stat = NULL;
 	}
 
-	if (error != 0 && mleak_stat != NULL) {
+#if 0
+    if (error != 0 && mleak_stat != NULL) {
 		free(mleak_stat);
 		mleak_stat = NULL;
 	}
+#endif
 
 	return (error);
 }

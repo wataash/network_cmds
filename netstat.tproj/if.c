@@ -70,10 +70,10 @@
 #include <net/if_dl.h>
 #include <net/if_types.h>
 #include <net/if_mib.h>
-#include <net/if_llreach.h>
+// #include <net/if_llreach.h>
 #include <net/ethernet.h>
 #include <net/route.h>
-#include <net/ntstat.h>
+//#include <net/ntstat.h>
 
 #include <net/pktsched/pktsched.h>
 #include <net/classq/if_classq.h>

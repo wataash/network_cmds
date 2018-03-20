@@ -72,14 +72,14 @@
 #include <net/route.h>
 #include <net/if.h>
 #include <net/if_var.h>
-#include <net/net_perf.h>
+// #include <net/net_perf.h>
 #include <netinet/in.h>
 #include <netinet/ip6.h>
 #include <netinet/icmp6.h>
 #include <netinet/in_systm.h>
-#include <netinet6/in6_pcb.h>
+// #include <netinet6/in6_pcb.h>
 #include <netinet6/in6_var.h>
-#include <netinet6/ip6_var.h>
+// #include <netinet6/ip6_var.h>
 #include <netinet6/raw_ip6.h>
 
 #include <arpa/inet.h>

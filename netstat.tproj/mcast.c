@@ -75,7 +75,7 @@
 #include <netinet/in.h>
 #include <netinet/if_ether.h>
 #include <netinet/igmp_var.h>
-#include <netinet6/mld6_var.h>
+// #include <netinet6/mld6_var.h>
 #include <arpa/inet.h>
 #include <netdb.h>
 

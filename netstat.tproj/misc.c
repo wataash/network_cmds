@@ -28,7 +28,7 @@
 
 #include <sys/sysctl.h>
 
-#include <net/net_api_stats.h>
+//#include <net/net_api_stats.h>
 #include <err.h>
 #include <stdio.h>
 
@@ -37,15 +37,15 @@
 void
 print_net_api_stats(uint32_t off __unused, char *name, int af __unused)
 {
-	static struct net_api_stats pnet_api_stats;
-	struct net_api_stats net_api_stats;
-	size_t len = sizeof(struct net_api_stats);
+//    static struct net_api_stats pnet_api_stats;
+//    struct net_api_stats net_api_stats;
+//    size_t len = sizeof(struct net_api_stats);
 	const char *mibvar = "net.api_stats";
 
-	if (sysctlbyname(mibvar, &net_api_stats, &len, 0, 0) < 0) {
-		warn("sysctl: %s", mibvar);
-		return;
-	}
+//    if (sysctlbyname(mibvar, &net_api_stats, &len, 0, 0) < 0) {
+//        warn("sysctl: %s", mibvar);
+//        return;
+//    }
 
 #define	STATDIFF(f) (net_api_stats.f - pnet_api_stats.f)
 #define	p(f, m) if (STATDIFF(f) || sflag <= 1) \

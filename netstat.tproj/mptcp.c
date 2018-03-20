@@ -42,7 +42,7 @@
 
 #include <netinet/in.h>
 #include <netinet/tcp.h>
-#include <netinet/mptcp_var.h>
+// #include <netinet/mptcp_var.h>
 
 #include <arpa/inet.h>
 
@@ -64,6 +64,7 @@ int mptcp_done = 0;
 extern void inetprint (struct in_addr *, int, char *, int);
 extern void inet6print (struct in6_addr *, int, char *, int);
 
+#if 0
 static void
 printmptcp(int id, conninfo_mptcp_t *mptcp)
 {
@@ -121,6 +122,7 @@ printmptcp(int id, conninfo_mptcp_t *mptcp)
 		flow = (mptcp_flow_t*)((caddr_t)flow + flow->flow_len);
 	}
 }
+#endif
 
 void
 mptcppr(uint32_t off, char *name, int af)
@@ -128,7 +130,7 @@ mptcppr(uint32_t off, char *name, int af)
 #pragma unused(off, name, af)
 	const char *mibvar = "net.inet.mptcp.pcblist";
 	size_t len = 0;
-	conninfo_mptcp_t *mptcp;
+	// conninfo_mptcp_t *mptcp;
 	char *buf, *bufp;
 	int id = 0;
 
@@ -160,11 +162,13 @@ mptcppr(uint32_t off, char *name, int af)
 	bufp = buf;
 	while (bufp < buf + len) {
 		/* Sanity check */
-		if (buf + len - bufp < sizeof(conninfo_mptcp_t))
+#if 0
+        if (buf + len - bufp < sizeof(conninfo_mptcp_t))
 			break;
 		mptcp = (conninfo_mptcp_t *)bufp;
 		printmptcp(id++, mptcp);
 		bufp += mptcp->mptcpci_len;
-	}
+#endif
+    }
 	free(buf);
 }
