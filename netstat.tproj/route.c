@@ -82,8 +82,28 @@
 #include <unistd.h>
 #include <err.h>
 #include <time.h>
-#include "netstat.h"
+// #include "netstat.h"
 
+struct sockaddr_in6;
+struct in6_addr;
+struct sockaddr;
+
+extern char     *routename6(struct sockaddr_in6 *);
+extern char     *netname6(struct sockaddr_in6 *, struct sockaddr *);
+
+extern void     pr_rthdr(int);
+extern void     pr_family(int);
+extern void     rt_stats(void);
+extern void     upHex(char *);
+extern char     *routename(uint32_t);
+extern char     *netname(uint32_t, uint32_t);
+extern void     routepr(void);
+
+int Aflag, aflag, lflag, nflag, sflag;
+int af;
+
+// a          0 1 2 3 4 5 6 7 8  9 10 11 12 14
+// ROUNDUP(a) 4 4 4 4 4 8 8 8 8 12 12 12 12 16
 /* alignment constraint for routing socket */
 #define ROUNDUP(a) \
        ((a) > 0 ? (1 + (((a) - 1) | (sizeof(uint32_t) - 1))) : sizeof(uint32_t))
@@ -206,8 +226,24 @@ pr_rthdr(int af)
 			"Flags", "Netif", "Expire");
 }
 
-/*
+/**
  * Print routing tables.
+ *
+ * @param needed size of buf (~10KB, 8760B for now)
+ * @param buf list of struct rt_msghdr2
+ *   @verbatim
+ *   | 1                                  | 2          | 3, 4, 5, ...      |
+ *   | size: rt_msghdr2->rtm_msglen (128) | (124)      | (124,124,124,...) |
+ *
+ *   evaluate:
+ *     1. ((struct rt_msghdr2*)buf)
+ *          ->rtm_msglen: 128
+ *     2. (struct rt_msghdr2*)(buf + 128)
+ *     3. (struct rt_msghdr2*)(buf + 128 + 124)
+ *     4. (struct rt_msghdr2*)(buf + 128 + 124 + 124)
+ *
+ *   compare with: netstat -raln
+ *   @endverbatim
  */
 void
 routepr(void)
@@ -223,7 +259,10 @@ routepr(void)
 	mib[1] = PF_ROUTE;
 	mib[2] = 0;
 	mib[3] = 0;
+	// Undocumented in sysctl(3)
 	mib[4] = NET_RT_DUMP2;
+	// Documented
+	// mib[4] = NET_RT_DUMP;
 	mib[5] = 0;
 	if (sysctl(mib, 6, NULL, &needed, NULL, 0) < 0) {
 		err(1, "sysctl: net.route.0.0.dump estimate");
@@ -238,10 +277,34 @@ routepr(void)
 	lim  = buf + needed;
 	for (next = buf; next < lim; next += rtm->rtm_msglen) {
 		rtm = (struct rt_msghdr2 *)next;
+		if (rtm->rtm_type != RTM_GET2)
+			printf("exception"); // breakpoint
+		if (rtm->rtm_use != rtm->rtm_rmx.rmx_pksent)
+			printf("exception"); // breakpoint
 		np_rtentry(rtm);
 	}
 }
 
+/**
+ * addrs: 7 -> b00000111 -> use sa[0,1,2]
+ * Assuming sizeof(struct sockaddr) == sa->sa_len == 16,
+ *
+ * *sa[0]: RTAX_DST      destination sockaddr present
+ * *sa[1]: RTAX_GATEWAY  gateway sockaddr present
+ * *sa[2]: RTAX_NETMASK  netmask sockaddr present
+ *    (3): RTAX_GENMASK  cloning mask sockaddr present
+ *    (4): RTAX_IFP      interface name sockaddr present
+ *    (5): RTAX_IFA      interface addr sockaddr present
+ *    (6): RTAX_AUTHOR   sockaddr for author of redirect
+ *    (7): RTAX_BRD      for NEWADDR, broadcast or p-p dest addr
+ *    (8): RTAX_MAX      size of array to allocate
+ *
+ * does:
+ *   rti_info[0] = sa[0];
+ *   rti_info[1] = sa[1];
+ *   rti_info[2] = sa[2];
+ *   rti_info[3-7] = NULL;
+ */
 static void
 get_rtaddrs(int addrs, struct sockaddr *sa, struct sockaddr **rti_info)
 {
@@ -250,16 +313,61 @@ get_rtaddrs(int addrs, struct sockaddr *sa, struct sockaddr **rti_info)
         for (i = 0; i < RTAX_MAX; i++) {
                 if (addrs & (1 << i)) {
                         rti_info[i] = sa;
+			// Under the assumption,
+			if (sa->sa_len != sizeof(struct sockaddr)) {
+				if (sa->sa_len != 0 || i != 2)
+					printf("exception\n"); // breakpoint
+			}
 						sa = (struct sockaddr *)(ROUNDUP(sa->sa_len) + (char *)sa);
+			// same as sa += 1;
 		} else {
                         rti_info[i] = NULL;
         }
 }
+	fflush(stdout); // breakpoint
 }
 
+/**
+ * @verbatim
+ * netstat(1) - OUTPUT
+ * 1 RTF_PROTO1     Protocol specific routing flag #1
+ * 2 RTF_PROTO2     Protocol specific routing flag #2
+ * 3 RTF_PROTO3     Protocol specific routing flag #3
+ * B RTF_BLACKHOLE  Just discard packets (during updates)
+ * b RTF_BROADCAST  The route represents a broadcast address
+ * C RTF_CLONING    Generate new routes on use
+ * c RTF_PRCLONING  Protocol-specified generate new routes on use
+ * D RTF_DYNAMIC    Created dynamically (by redirect)
+ * G RTF_GATEWAY    Destination requires forwarding by intermediary
+ * H RTF_HOST       Host entry (net otherwise)
+ * I RTF_IFSCOPE    Route is associated with an interface scope
+ * i RTF_IFREF      Route is holding a reference to the interface
+ * L RTF_LLINFO     Valid protocol to link address translation
+ * M RTF_MODIFIED   Modified dynamically (by redirect)
+ * m RTF_MULTICAST  The route represents a multicast address
+ * R RTF_REJECT     Host or net unreachable
+ * r RTF_ROUTER     Host is a default router
+ * S RTF_STATIC     Manually added
+ * U RTF_UP         Route usable
+ * W RTF_WASCLONED  Route was generated as a result of cloning
+ * X RTF_XRESOLVE   External daemon translates proto to link address
+ * Y RTF_PROXY      Proxying; cloned routes will not be scoped
+ *
+ * rtm->rtm_addrs examples:
+ * rtm->rtm_addrs: 7 -> b00000111 -> RTAX_DST, RTAX_GATEWAY, RTAX_NETMASK
+ *   Destination        Gateway            Flags        Refs      Use    Mtu   Netif Expire
+ *   default            172.16.50.1        UGSc          116        5   1500     en0
+ * rtm->rtm_addrs: 3 -> b00000011 -> RTAX_DST, RTAX_GATEWAY
+ *   10.131.16.20       172.16.50.1        UGHWIi          1    22026   1500     en0
+ *
+ * rtm[1]: struct sockaddr
+ * @endverbatim
+ */
 static void
 np_rtentry(struct rt_msghdr2 *rtm)
 {
+	if ((rtm->rtm_addrs != 7) && (rtm->rtm_addrs != 3))
+		printf("exception\n"); // breakpoint
 	struct sockaddr *sa = (struct sockaddr *)(rtm + 1);
 	struct sockaddr *rti_info[RTAX_MAX];
 	static int old_fam;
@@ -274,6 +382,7 @@ np_rtentry(struct rt_msghdr2 *rtm)
 	if ((rtm->rtm_flags & RTF_WASCLONED) &&
 	    (rtm->rtm_parentflags & RTF_PRCLONING) &&
 	    !aflag) {
+			fflush(stdout); // breakpoint
 			return;
 	}
 
@@ -326,6 +435,18 @@ np_rtentry(struct rt_msghdr2 *rtm)
 	putchar('\n');
 }
 
+/**
+ * "default" if:
+ *   ((sockaddr_in *)sa)->sin_addr.s_addr == INADDR_ANY
+ *   and
+ *     ((struct sockaddr_in *)mask)->sin_addr.s_addr == 0L (INADDR_ANY)
+ *     or
+ *     mask->sa_len == 0
+ *
+ * "172.16.50.1" if:
+ *   - no nflag
+ *   - flags: RTF_HOST
+ */
 static void
 p_sockaddr(struct sockaddr *sa, struct sockaddr *mask, int flags, int width)
 {
@@ -339,7 +460,11 @@ p_sockaddr(struct sockaddr *sa, struct sockaddr *mask, int flags, int width)
 		if ((sin->sin_addr.s_addr == INADDR_ANY) &&
 			mask &&
 		    (ntohl(((struct sockaddr_in *)mask)->sin_addr.s_addr) == 0L || mask->sa_len == 0))
+		{
+				if (((struct sockaddr_in *)mask)->sin_addr.s_addr != 0 || mask->sa_len != 0)
+					fflush(stdout); // breakpoint
 				cp = "default" ;
+		}
 		else if (flags & RTF_HOST)
 			cp = routename(sin->sin_addr.s_addr);
 		else if (mask)
@@ -672,10 +797,18 @@ rt_stats(void)
 	int mib[6];
 	size_t len;
 
+	// sysctl(3)
+	// 1st level
 	mib[0] = CTL_NET;
+	// 2nd
+	// Return the entire routing table or a subset of it.
 	mib[1] = AF_ROUTE;
+	// The third level name is a protocol number, which is currently always 0
 	mib[2] = 0;
+	// The fourth level name is an address family,
+	// which may be set to 0 to select all address families.
 	mib[3] = 0;
+	// 5th and 6th: Not documnted yet
 	mib[4] = NET_RT_STAT;
 	mib[5] = 0;
 	len = sizeof(struct rtstat);
@@ -686,6 +819,7 @@ rt_stats(void)
 	mib[1] = AF_ROUTE;
 	mib[2] = 0;
 	mib[3] = 0;
+	// Undocumented yet
 	mib[4] = NET_RT_TRASH;
 	mib[5] = 0;
 	len = sizeof(rttrash);
@@ -694,6 +828,7 @@ rt_stats(void)
 
 	printf("routing:\n");
 
+#if 0
 #define	p(f, m) if (rtstat.f || sflag <= 1) \
 	printf(m, rtstat.f, plural(rtstat.f))
 
@@ -709,6 +844,21 @@ rt_stats(void)
 	if (rttrash || sflag <= 1)
 		printf("\t%u route%s not in table but not freed\n",
 		    rttrash, plural(rttrash));
+#else
+	printf("\t%u bad routing redirect\n", rtstat.rts_badredirect);
+	printf("\t%u dynamically created route\n", rtstat.rts_dynamic);
+	printf("\t%u new gateway due to redirects\n", rtstat.rts_newgateway);
+	printf("\t%u destination found unreachable\n", rtstat.rts_unreach);
+	printf("\t%u use of a wildcard route\n", rtstat.rts_wildcard);
+	printf("\t%u lookup returned indirect "
+		   "routes pointing to indirect gateway route\n",
+	       rtstat.rts_badrtgwroute);
+
+	// if (rttrash || sflag <= 1)
+	if (1)
+		printf("\t%u route not in table but not freed\n", rttrash);
+	fflush(stdout); // breakpoint
+#endif
 }
 
 void
@@ -728,4 +878,42 @@ upHex(char *p0)
 			*p += ('A' - 'a');
 			break;
 		}
+}
+
+/**
+ * RT: Routing Table?
+ * RTA: RT Addresses
+ * RTAX: RTA Extension?
+ * RTF: RT Flags
+*/
+int main(int argc, char **argv)
+{
+	setbuf(stdout, 0);
+	aflag = 1;
+	lflag = 1;
+	nflag = 1;
+
+	/* listed in netstat.h */
+	printf("-------------------------------------------------- \n");
+	printf("pr_rthdr(0);\n");
+	pr_rthdr(0);
+	printf("-------------------------------------------------- \n");
+	printf("pr_family(0);\n");
+	pr_family(0);
+	printf("-------------------------------------------------- \n");
+	printf("rt_stats();\n");
+	rt_stats();
+	printf("-------------------------------------------------- \n");
+	char abcdefgh123[] = "abcdefgh123";
+	printf("// upHex(abcdefgh123);\n");
+	upHex(abcdefgh123); // "abcdefgh123" -> "ABCDEFgh123"
+	printf("-------------------------------------------------- \n");
+	printf("char *rn = routename(0);\n");
+	char *rn = routename(0);
+	printf("-------------------------------------------------- \n");
+	printf("char *nn = netname(0, 0);\n");
+	char *nn = netname(0, 0);
+	printf("-------------------------------------------------- \n");
+	printf("routepr();\n");
+	routepr();
 }

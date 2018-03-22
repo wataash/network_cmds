@@ -191,6 +191,7 @@ main(argc, argv)
 		s = socket(PF_ROUTE, SOCK_RAW, 0);
 	if (s < 0)
 		err(EX_OSERR, "socket");
+	// ?
 	setuid(uid);
 	if (*argv)
 		switch (keyword(*argv)) {
@@ -571,6 +572,7 @@ newroute(argc, argv)
 		errx(EX_NOPERM, "must be root to alter routing table");
 	}
 	cmd = argv[0];
+	// only "get"
 	if (*cmd != 'g')
 		shutdown(s, 0); /* Don't want to read back our messages */
 	while (--argc > 0) {
@@ -721,7 +723,7 @@ newroute(argc, argv)
 			rtm_addrs &= ~RTA_NETMASK;
 			memset((void *)&so_mask, 0, sizeof(so_mask));
 		}
-#endif 
+#endif
 	}
 	if (forcenet)
 		ishost = 0;
@@ -774,7 +776,7 @@ inet_makenetandmask(in_addr_t net, struct sockaddr_in *sin,
     struct sockaddr_in *sin_mask, in_addr_t bits)
 {
 	in_addr_t mask = 0;
-	
+
 	rtm_addrs |= RTA_NETMASK;
 	/*
 	 * MSB of net should be meaningful. 0/0 is exception.
